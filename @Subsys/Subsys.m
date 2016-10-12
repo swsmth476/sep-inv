@@ -1,48 +1,52 @@
 classdef Subsys
 %
-%  SYS: Class to represent a subsystem in a decomposable synthesis problem.
+%  SUBSYS: Class to represent a subsystem in a decomposable synthesis problem.
 %  =======================================
-%  
 %  
 %  SYNTAX
 %  ------
-%     
-%      SepMLS(sub_n, xpart_res, xpart_dim, xpart_offset, upart_res, upart_dim, upart_offset)
+%    Subsys(sub_n, xpart_res, xpart_dim, xpart_offset, upart_res, upart_dim, upart_offset)
 %    
-%  
 %  DESCRIPTION
 %  -----------
-%     Class to represent a subsystem in a decomposable synthesis problem.
-%  
+%    Contains a state space partition for both the state and input of the
+%    subsystem being considered. Can be used to compute a transition 
+%    function for the subsystem under consideration.
+%
 %  INPUT
 %  -----
-%     
-%        
-%          Parameter1                  
-%                       
+%    xpart_res      Resolution of the state space partition (i.e. the length of a cell)
+%    xpart_dim      Dimension of the state space partition (number of cells by number of cells ...)
+%    xpart_offset   Corresponds to the lowest corner of our partition hyperbox
+%                   with partition coordinate [0 0 0 ... 0]. Will be added to all
+%                   coordinates
 %  
+%    upart_...      Similarly defined as above for the input space
+%                   partition
 %  
 %  METHODS
 %  -------
-%   ss.
+%   ss.overflow(ss, pcrd, mode)  check if a partition coordinate is inside the partition space
+%   ss.ptoi(ss, pcrd, mode)  partition coordinate -> partition index
+%   ss.itop(ss, pidx, mode)  partition index -> partition coordinate
+%   ss.ptos(ss, pidx, mode)  partition coordinate -> state space coordinate
+%   ss.xtop(ss, x)  state space coordinate -> partition coordinate
+%                          NOTE: only implemented for the state (not needed for input)
 %  
  
     properties (SetAccess=protected)
         
-        % sub_n; % subsystem dimensions [n1 n2 n3 n3....]'
-        
+        % system dynamics x(k+1) = Ax(k) + Bu(k) + Ed(k)
         A; 
         B;
         E;
-        K; % system dynamics x(k+1) = Ax(k) + Bu(k) + Ed(k)
+        K;
         
         % state space partition
-        xpart_res; % partition resolution (i.e. the length of a cell)
-        xpart_dim; % partition dimensions (number of cells by number of cells ...)
-        xpart_prod; % for partition calculations
-        xpart_offset; % x-value of partition coordinate [0 0 0 0 ... 0]'
-        % this offset corresponds to the lowest corner of our
-        % partition hyperbox, i.e., it will be added to all coordinates
+        xpart_res;
+        xpart_dim;
+        xpart_prod;
+        xpart_offset;
         
         % input space partition
         upart_res;
@@ -54,7 +58,7 @@ classdef Subsys
     
     methods
         
-        function ss = SepMLS(sub_n, xpart_res, xpart_dim, xpart_offset, upart_res, upart_dim, upart_offset)
+        function ss = SepMLS(xpart_res, xpart_dim, xpart_offset, upart_res, upart_dim, upart_offset)
             
             if(size(part_dim, 2) ~= 1)
                 error('Error: partition dimensions should be a column vector.');
@@ -85,7 +89,6 @@ classdef Subsys
         end
         
         function ovf = overflow(ss, pcrd, mode)
-        % check if a partition coordinate is inside the partition space
         	if(strcmp(mode, 'state'))
                 part_dim = ss.xpart_dim;
             elseif(strcmp(mode, 'input'))
@@ -105,7 +108,6 @@ classdef Subsys
         end
         
         function pidx = ptoi(ss, pcrd, mode)
-        % partition coordinate -> partition index
             if(strcmp(mode, 'state'))
                 part_prod = ss.xpart_prod;
             elseif(strcmp(mode, 'input'))
@@ -118,7 +120,6 @@ classdef Subsys
         end
         
         function pcrd = itop(ss, pidx, mode)
-        % partition index -> partition coordinate
             if(strcmp(mode, 'state'))
                 part_prod = ss.xpart_prod;
                 part_dim = ss.xpart_dim;
@@ -141,7 +142,6 @@ classdef Subsys
         end
         
         function sscrd = ptos(ss, pidx, mode)
-        % partition coordinate -> state space coordinate
             if(strcmp(mode, 'state'))
                 part_offset = ss.xpart_offset;
                 part_res = ss.xpart_res;
@@ -155,13 +155,11 @@ classdef Subsys
         end
             
         function pcrd = xtop(ss, x)
-        % state space coordinate -> partition coordinate
-        % NOTE: only implemented for the state (not needed for input)
             x_scaled = x./ss.xpart_res;
             pcrd = round(x_scaled);
         end
         
-        function next = trans(ss, i, xidx, uidx)
+        function next = trans(ss, xidx, uidx)
             % get state and input
             x = ptos(ss, xidx, 'state');
             u = ptos(ss, uidx, 'input');

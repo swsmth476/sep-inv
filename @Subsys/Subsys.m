@@ -26,11 +26,11 @@ classdef Subsys
 %  
 %  METHODS
 %  -------
-%   ss.overflow(ss, pcrd, mode)  check if a partition coordinate is inside the partition space
-%   ss.ptoi(ss, pcrd, mode)  partition coordinate -> partition index
-%   ss.itop(ss, pidx, mode)  partition index -> partition coordinate
-%   ss.ptos(ss, pidx, mode)  partition coordinate -> state space coordinate
-%   ss.xtop(ss, x)  state space coordinate -> partition coordinate
+%    ss.overflow(ss, pcrd, mode)  check if a partition coordinate is inside the partition space
+%    ss.ptoi(ss, pcrd, mode)  partition coordinate -> partition index
+%    ss.itop(ss, pidx, mode)  partition index -> partition coordinate
+%    ss.ptos(ss, pidx, mode)  partition coordinate -> state space coordinate
+%    ss.xtop(ss, x)  state space coordinate -> partition coordinate
 %                          NOTE: only implemented for the state (not needed for input)
 %  
  

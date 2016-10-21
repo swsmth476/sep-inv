@@ -50,12 +50,14 @@ classdef Subsys < handle
         B;
         
         % state space partition
+        xpart;
         xpart_res;
         xpart_dim;
         xpart_prod;
         xpart_offset;
         
         % input space partition
+        upart;
         upart_res;
         upart_dim;
         upart_prod;
@@ -70,12 +72,16 @@ classdef Subsys < handle
         
         function ss = Subsys(sub_n, xpart_res, xpart_dim, xpart_offset, upart_res, upart_dim, upart_offset)
             
-            if((size(xpart_dim, 2) ~= 1) || (size(upart_dim, 2) ~= 1))
-                error('Error: partition dimensions should be a column vector.');
+            if((size(xpart_dim, 1) ~= 1) || (size(upart_dim, 1) ~= 1))
+                error('Error: partition dimensions should be a row vector.');
             end
             
             if(sum(sub_n) ~= length(xpart_dim))
                 error('Error: partition dimension should equal subsystem dimension.');
+            end
+            
+            if(sum(size(xpart_dim) == size(xpart_offset)) ~= 2 || sum(size(upart_dim) == size(upart_offset)) ~= 2)
+                error('Error: partition dimension should equal offset dimension.');
             end
             
             ss.sub_n = sub_n;
@@ -88,25 +94,75 @@ classdef Subsys < handle
             ss.upart_offset = upart_offset;
             
             ss.xpart_prod = zeros(size(ss.xpart_dim));
-            ss.xpart_prod(1) = 1;
-            for i = 2:length(xpart_dim)
-                ss.xpart_prod(i) = prod(xpart_dim(1:i-1));
+            n = length(xpart_dim);
+            ss.xpart_prod(n) = 1;
+            for i = 1:n-1
+                ss.xpart_prod(n-i) = ss.xpart_prod(n-i+1)*ss.xpart_dim(n-i+1);
             end
             ss.upart_prod = zeros(size(ss.upart_dim));
-            ss.upart_prod(1) = 1;
-            for i = 2:length(upart_dim)
-                ss.upart_prod(i) = prod(upart_dim(1:i-1));
+            n = length(upart_dim);
+            ss.upart_prod(n) = 1;
+            for i = 1:n-1
+                ss.upart_prod(n-i) = ss.upart_prod(n-i+1)*ss.upart_dim(n-i+1);
+            end
+            
+            ss.createPart();
+        end
+        
+        function createPart(ss)
+            nx = prod(ss.xpart_dim);
+            ss.xpart = cell(1,nx);
+            part = zeros(size(ss.xpart_dim));
+            ss.xpart{1} = part;
+            for i = 2:nx
+                part = ss.incrX(part);
+                ss.xpart{i} = part;
+            end
+            nu = prod(ss.upart_dim);
+            ss.upart = cell(1,nu);
+            part = zeros(size(ss.upart_dim));
+            ss.upart{1} = part;
+            for i = 2:nu
+                part = ss.incrU(part);
+                ss.upart{i} = part;
             end
         end
         
+        function xplus = incrX(ss, part_in)
+            part = part_in;
+            part_dim = ss.xpart_dim;
+            part_offset = ss.xpart_offset;
+            n = length(ss.xpart_dim);
+            to_increment = n;
+            while(part(to_increment) == part_dim(to_increment) - 1)
+                to_increment = to_increment - 1;
+            end
+            part(to_increment) = part(to_increment) + 1;
+            part(to_increment + 1:n) = 0;
+            xplus = part;
+        end
+        
+        function uplus = incrU(ss, part_in)
+            part = part_in;
+            part_dim = ss.upart_dim;
+            part_offset = ss.upart_offset;
+            n = length(ss.upart_dim);
+            to_increment = n;
+            while(part(to_increment) == part_dim(to_increment) - 1)
+                to_increment = to_increment - 1;
+            end
+            part(to_increment) = part(to_increment) + 1;
+            part(to_increment + 1:n) = 0;
+            uplus = part;
+        end
+        
         function ovf = overflow(ss, pcrd, mode)
-            
-        	if(strcmp(mode, 'state'))
+        	if(strcmp(mode, 'state')) %#ok<ALIGN>
                 part_dim = ss.xpart_dim;
-                part_prod = ss.xpart_prod;
+                part_offset = ss.xpart_offset;
             elseif(strcmp(mode, 'input'))
                 part_dim = ss.upart_dim;
-                part_prod = ss.upart_prod;
+                part_offset = ss.upart_offset;
             else
                 error('Error: mode specified should either be "state" or "input".');
             end
@@ -117,57 +173,63 @@ classdef Subsys < handle
                 error('Error: unexpected partition coordinate dimensions.');
             end
             
-            ovf = ~((1 <= part_prod' * pcrd + 1) && (part_prod' * pcrd + 1 <= prod(part_dim)));
+            n = length(part_dim);
+            ovf = (sum(zeros(size(part_dim)) + part_offset <= pcrd) ~= n) ...
+                            || (sum(pcrd < part_dim + part_offset) ~= n);
         end
         
         function pidx = ptoi(ss, pcrd, mode)
             if(strcmp(mode, 'state'))
                 part_prod = ss.xpart_prod;
+                part_offset = ss.xpart_offset;
             elseif(strcmp(mode, 'input'))
                 part_prod = ss.upart_prod;
+                part_offset = ss.upart_offset;
             else
                 error('Error: mode specified should either be "state" or "input".');
             end
             
-            pidx = part_prod' * pcrd + 1;
+            if(sum(size(part_prod) == size(pcrd)) ~= 2)
+                error('Error: unexpected coordinate dimension.');
+            end
+            
+            pidx = part_prod * pcrd' + 1;
         end
         
-        function pcrd = itop(ss, pidx, mode)
-            if(strcmp(mode, 'state'))
-                part_prod = ss.xpart_prod;
-                part_dim = ss.xpart_dim;
-            elseif(strcmp(mode, 'input'))
-                part_prod = ss.upart_prod;
-                part_dim = ss.upart_dim;
-            else
-                error('Error: mode should be a string, either "state" or "input".');
-            end
-            
-            if ~((1 <= pidx) && (pidx <= prod(part_dim)))
-                error('Error: partition index out of range.');
-            end
-            
-            pidx = pidx - 1;
-            pcrd = zeros(size(part_prod));
-            n = length(part_prod) + 1;
-            for i = 1:length(part_prod)
-                pcrd(n-i) = floor(pidx / part_prod(n-i));
-                pidx = mod(pidx, part_prod(n-i));
-            end
-        end
+%         function pcrd = itop(ss, pidx, mode)
+%             if sum(size(pidx) ~= size(1))
+%                 error('Error: expected 1 by 1 index.');
+%             end
+%             
+%             if(strcmp(mode, 'state'))
+%                 part_dim = ss.xpart_dim;
+%                 if ~((1 <= pidx) && (pidx <= prod(part_dim)))
+%                     error('Error: partition index out of range.');
+%                 end
+%                 pcrd = ss.xpart{pidx};
+%             elseif(strcmp(mode, 'input'))
+%                 part_dim = ss.upart_dim;
+%                 if ~((1 <= pidx) && (pidx <= prod(part_dim)))
+%                     error('Error: partition index out of range.');
+%                 end
+%                 pcrd = ss.upart{pidx};
+%             else
+%                 error('Error: mode should be a string, either "state" or "input".');
+%             end
+%         end
         
         function x = ptox(ss, pidx, mode)
             if(strcmp(mode, 'upper'))
-                x = pidx*ss.xpart_res + ss.xpart_offset + 0.5*ss.xpart_res*ones(ss.sub_n, 1);
+                x = pidx.*ss.xpart_res + ss.xpart_offset + 0.5.*ss.xpart_res.*ones(1, ss.sub_n);
             elseif(strcmp(mode, 'lower'))
-                x = pidx*ss.xpart_res + ss.xpart_offset - 0.5*ss.xpart_res*ones(ss.sub_n, 1);
+                x = pidx.*ss.xpart_res + ss.xpart_offset - 0.5.*ss.xpart_res.*ones(1, ss.sub_n, 1);
             else
                 error('Error: mode should be a string, either "upper" or "lower".');
             end
         end
         
         function u = ptou(ss, pidx)
-            u = pidx*ss.upart_res + ss.upart_offset;
+            u = pidx.*ss.upart_res + ss.upart_offset;
         end
             
         function pcrd = xtop(ss, x)
@@ -176,13 +238,18 @@ classdef Subsys < handle
         end
         
         function setAB(ss, A, B)
+            if(sum(size(A) ~= [ss.sub_n ss.sub_n]) ~= 2) %#ok<ALIGN>
+                error(['wrong dimensions of A, found ', num2str(size(A)), ' expected ', num2str([ss.sub_n ss.sub_n])]);
+            else if((size(B,1) ~= ss.sub_n) || (size(B,2) ~= size(ss.upart_dim,2))) %#ok<ALIGN>
+                error(['wrong dimensions of B, found ', num2str(size(B)), ' expected ', num2str([ss.sub_n size(ss.upart_dim,2)])]);
+            end
             ss.A = A;
             ss.B = B;
         end
         
         function setd(ss, d_set)
-            if(size(d_set,1) ~= ss.sub_n)
-               error('Error: disturbance set should have rows equal to subsystem dimension.'); 
+            if(size(d_set,2) ~= ss.sub_n)
+               error('Error: disturbance set should have cols equal to subsystem dimension.'); 
             end
             ss.d_set = d_set;
         end
@@ -192,16 +259,20 @@ classdef Subsys < handle
                error('Error: disturbance set has not been specified yet.'); 
             end
             
+            if(isempty(ss.A) || isempty(ss.B))
+               error('Error: dynamics not specified.');
+            end
+            
             % get state and input
-            pidx = itop(ss, xidx, 'state');
+            pidx = ss.xpart{xidx};
             x = ptox(ss, pidx, 'upper');
-            pidx = itop(ss, uidx, 'input');
+            pidx = ss.upart{uidx};
             u = ptou(ss, pidx);
             
             % calculate transitions
             next = [];
-            for i = 1:size(ss.d_set, 2)
-                x_plus = ss.A*x + ss.B*u + ss.d_set(:, i);
+            for i = 1:size(ss.d_set, 1)
+                x_plus = (ss.A*x' + ss.B*u' + ss.d_set(i, :)')';
                 p_plus = xtop(ss, x_plus);
                 if(~overflow(ss, p_plus, 'state'))
                     next = {next p_plus};

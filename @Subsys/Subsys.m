@@ -29,7 +29,6 @@ classdef Subsys < handle
 %    for next 4 fns, mode = "state" or "input" for each partition
 %    ss.overflow(ss, pcrd, mode)  check if a partition coordinate is inside the partition space
 %    ss.ptoi(ss, pcrd, mode)  partition coordinate -> partition index
-%    ss.itop(ss, pidx, mode)  partition index -> partition coordinate
 %    mode = "upper" or "lower" for ptox, to get either upper or lower
 %    corner of partition box
 %    ss.ptox(ss, pidx, mode)  partition coordinate -> state space coordinate
@@ -38,7 +37,7 @@ classdef Subsys < handle
 %                    NOTE: only implemented for the state (not needed for input)
 %    ss.setd(ss, d_set)  set disturbance assumptions for subsystem
 %    ss.trans(ss, xidx, uidx)  get possible transitions
-%  
+%    ss.makeTrans(ss)  create transition function
  
     properties (SetAccess=protected)
         
@@ -65,6 +64,9 @@ classdef Subsys < handle
         
         % assumption set
         d_set;
+        
+        % transition map
+        tmap;
         
     end
     
@@ -238,9 +240,10 @@ classdef Subsys < handle
         end
         
         function setAB(ss, A, B)
-            if(sum(size(A) ~= [ss.sub_n ss.sub_n]) ~= 2) %#ok<ALIGN>
+            if(sum(size(A) == [ss.sub_n ss.sub_n]) ~= 2)
                 error(['wrong dimensions of A, found ', num2str(size(A)), ' expected ', num2str([ss.sub_n ss.sub_n])]);
-            else if((size(B,1) ~= ss.sub_n) || (size(B,2) ~= size(ss.upart_dim,2))) %#ok<ALIGN>
+            end
+            if((size(B,1) ~= ss.sub_n) || (size(B,2) ~= size(ss.upart_dim,2)))
                 error(['wrong dimensions of B, found ', num2str(size(B)), ' expected ', num2str([ss.sub_n size(ss.upart_dim,2)])]);
             end
             ss.A = A;
@@ -271,11 +274,22 @@ classdef Subsys < handle
             
             % calculate transitions
             next = [];
+            num_trans = 0;
             for i = 1:size(ss.d_set, 1)
                 x_plus = (ss.A*x' + ss.B*u' + ss.d_set(i, :)')';
                 p_plus = xtop(ss, x_plus);
                 if(~overflow(ss, p_plus, 'state'))
-                    next = {next p_plus};
+                    num_trans = num_trans + 1;
+                    next{num_trans} = ptoi(ss, p_plus, 'state');
+                end
+            end
+        end
+        
+        function getTrans(ss)
+            ss.tmap = cell(length(ss.xpart), length(ss.upart));
+            for i = 1:length(ss.xpart)
+                for j = 1:length(ss.upart)
+                    ss.tmap{i, j} = ss.trans(i, j);
                 end
             end
         end

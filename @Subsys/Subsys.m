@@ -68,6 +68,11 @@ classdef Subsys < handle
         % transition map
         tmap;
         
+        % invariant set
+        num_generators;
+        vertices;
+        inv_set;
+        
     end
     
     methods
@@ -78,7 +83,7 @@ classdef Subsys < handle
                 error('Error: partition dimensions should be a row vector.');
             end
             
-            if(sum(sub_n) ~= length(xpart_dim))
+            if(sub_n ~= length(xpart_dim))
                 error('Error: partition dimension should equal subsystem dimension.');
             end
             
@@ -109,6 +114,7 @@ classdef Subsys < handle
             end
             
             ss.createPart();
+            ss.inv_set = zeros(size(ss.xpart));
         end
         
         function createPart(ss)
@@ -198,28 +204,6 @@ classdef Subsys < handle
             pidx = part_prod * pcrd' + 1;
         end
         
-%         function pcrd = itop(ss, pidx, mode)
-%             if sum(size(pidx) ~= size(1))
-%                 error('Error: expected 1 by 1 index.');
-%             end
-%             
-%             if(strcmp(mode, 'state'))
-%                 part_dim = ss.xpart_dim;
-%                 if ~((1 <= pidx) && (pidx <= prod(part_dim)))
-%                     error('Error: partition index out of range.');
-%                 end
-%                 pcrd = ss.xpart{pidx};
-%             elseif(strcmp(mode, 'input'))
-%                 part_dim = ss.upart_dim;
-%                 if ~((1 <= pidx) && (pidx <= prod(part_dim)))
-%                     error('Error: partition index out of range.');
-%                 end
-%                 pcrd = ss.upart{pidx};
-%             else
-%                 error('Error: mode should be a string, either "state" or "input".');
-%             end
-%         end
-        
         function x = ptox(ss, pidx, mode)
             if(strcmp(mode, 'upper'))
                 x = pidx.*ss.xpart_res + ss.xpart_offset + 0.5.*ss.xpart_res.*ones(1, ss.sub_n);
@@ -235,6 +219,7 @@ classdef Subsys < handle
         end
             
         function pcrd = xtop(ss, x)
+            % fix rounding error??
             x_scaled = x./ss.xpart_res;
             pcrd = round(x_scaled);
         end
@@ -266,21 +251,20 @@ classdef Subsys < handle
                error('Error: dynamics not specified.');
             end
             
-            % get state and input
             pidx = ss.xpart{xidx};
             x = ptox(ss, pidx, 'upper');
             pidx = ss.upart{uidx};
             u = ptou(ss, pidx);
             
-            % calculate transitions
             next = [];
-            num_trans = 0;
             for i = 1:size(ss.d_set, 1)
                 x_plus = (ss.A*x' + ss.B*u' + ss.d_set(i, :)')';
                 p_plus = xtop(ss, x_plus);
                 if(~overflow(ss, p_plus, 'state'))
-                    num_trans = num_trans + 1;
-                    next{num_trans} = ptoi(ss, p_plus, 'state');
+                    next{i} = ptoi(ss, p_plus, 'state');
+                else
+                    % it overflowed, add indicator of this
+                    next{i} = -1;
                 end
             end
         end
@@ -290,6 +274,66 @@ classdef Subsys < handle
             for i = 1:length(ss.xpart)
                 for j = 1:length(ss.upart)
                     ss.tmap{i, j} = ss.trans(i, j);
+                end
+            end
+        end
+        
+        function setGen(ss, gen)
+            % maybe check to make sure gen makes geometric sense?
+            ss.num_generators = gen;
+        end
+        
+        function setInv(ss, vert_in)
+            if(sum(size(vert_in) == [ss.num_generators ss.sub_n]) ~= 2)
+                error(['wrong dimensions of input, found ', num2str(size(vert_in)), ' expected ', num2str([ss.num_generators ss.sub_n])]);
+            end
+            ss.vertices = vert_in;
+            ss.updateInv();
+        end
+        
+        function in = inside(ss, xidx)
+           in = 1;
+           for i = 1:ss.num_generators
+               if(sum(ss.xpart{xidx} <= ss.vertices(i,:)) ~= ss.sub_n)
+                   in = 0;
+                   break;
+               end
+           end
+        end
+        
+        function updateInv(ss)
+            for i = 1:length(ss.xpart)
+                ss.inv_set = ss.inside(i);
+            end
+        end
+        
+        function forall = isSafe(x)
+            % x, u, and d are all indices
+            % ss.inside(ss.tmap{x, u}{d})
+            % \forall d, \exists u s.t. above holds
+            forall = 1;
+            for d = 1:size(ss.d_set, 1)
+                exists = 0;
+                for u = 1:length(ss.upart)
+                    if(inside(ss.tmap{x, u}{d}))
+                        exists = 1;
+                        break;
+                    end
+                end
+                if(~exists)
+                   forall = 0;
+                   break;
+                end
+            end
+        end
+        
+        function forall = verifyInv(ss)
+            % every state needs to be safe
+            forall = 1;
+            for i = 1:length(ss.xpart)
+                if(~isSafe(i))
+                    forall = 0;
+                    break;
                 end
             end
         end

@@ -230,8 +230,11 @@ classdef Subsys < handle
         end
             
         function pcrd = xtop(ss, x)
-            % fix rounding error??
             x_scaled = x./ss.xpart_res;
+            % to ensure that we round DOWN from half-coordinates
+            % (according to Sam's transition properties)
+            x_scaled(mod(x_scaled, 1) == 0.5) = ...
+                x_scaled(mod(x_scaled, 1) == 0.5) - 0.5;
             pcrd = round(x_scaled);
         end
         
@@ -247,6 +250,8 @@ classdef Subsys < handle
         end
         
         function setd(ss, d_set)
+            % add all upper bounds of disturbance as well as lower bounds
+            % of disturbance
             if(size(d_set,2) ~= ss.sub_n)
                error('Error: disturbance set should have cols equal to subsystem dimension.'); 
             end

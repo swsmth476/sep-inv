@@ -182,17 +182,21 @@ classdef Subsys < handle
             end
             
             n = length(part_dim);
-            ovf = (sum(zeros(size(part_dim)) + part_offset <= pcrd) ~= n) ...
-                            || (sum(pcrd < part_dim + part_offset) ~= n);
+            ovf = (sum(zeros(size(part_dim)) <= pcrd) ~= n) ...
+                            || (sum(pcrd < part_dim) ~= n);
         end
         
         function pidx = ptoi(ss, pcrd, mode)
             if(strcmp(mode, 'state'))
+                if(ss.overflow(pcrd, 'state'))
+                    error('Error: coordinate is out of range of state partition.');
+                end
                 part_prod = ss.xpart_prod;
-                part_offset = ss.xpart_offset;
             elseif(strcmp(mode, 'input'))
+                if(ss.overflow(pcrd, 'input'))
+                    error('Error: coordinate is out of range of input partition.');
+                end
                 part_prod = ss.upart_prod;
-                part_offset = ss.upart_offset;
             else
                 error('Error: mode specified should either be "state" or "input".');
             end
@@ -205,16 +209,23 @@ classdef Subsys < handle
         end
         
         function x = ptox(ss, pidx, mode)
+            if(ss.overflow(pidx, 'state'))
+                error('Error: coordinate is out of state partition.');
+            end
+            
             if(strcmp(mode, 'upper'))
                 x = pidx.*ss.xpart_res + ss.xpart_offset + 0.5.*ss.xpart_res.*ones(1, ss.sub_n);
             elseif(strcmp(mode, 'lower'))
-                x = pidx.*ss.xpart_res + ss.xpart_offset - 0.5.*ss.xpart_res.*ones(1, ss.sub_n, 1);
+                x = pidx.*ss.xpart_res + ss.xpart_offset - 0.5.*ss.xpart_res.*ones(1, ss.sub_n);
             else
                 error('Error: mode should be a string, either "upper" or "lower".');
             end
         end
         
         function u = ptou(ss, pidx)
+            if(ss.overflow(pidx, 'input'))
+                error('Error: coordinate is out of input partition.');
+            end
             u = pidx.*ss.upart_res + ss.upart_offset;
         end
             

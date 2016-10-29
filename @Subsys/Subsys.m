@@ -304,6 +304,9 @@ classdef Subsys < handle
         end
         
         function setInv(ss, vert_in)
+            if(isempty(ss.num_generators))
+                error('Error: number of invariant set generators unset.');
+            end
             if(sum(size(vert_in) == [ss.num_generators ss.sub_n]) ~= 2)
                 error(['wrong dimensions of input, found ', num2str(size(vert_in)), ' expected ', num2str([ss.num_generators ss.sub_n])]);
             end
@@ -323,7 +326,7 @@ classdef Subsys < handle
         
         function updateInv(ss)
             for i = 1:length(ss.xpart)
-                ss.inv_set = ss.inside(i);
+                ss.inv_set(i) = ss.inside(i);
             end
         end
         
@@ -335,7 +338,7 @@ classdef Subsys < handle
             for d = 1:size(ss.d_set, 1)
                 exists = 0;
                 for u = 1:length(ss.upart)
-                    if(inside(ss.tmap{x, u}{d}))
+                    if(ss.inv_set(ss.tmap{x, u}{d}))
                         exists = 1;
                         break;
                     end
@@ -348,9 +351,9 @@ classdef Subsys < handle
         end
         
         function forall = verifyInv(ss)
-            % every state needs to be safe
+            % check every state in the invariant set
             forall = 1;
-            for i = 1:length(ss.xpart)
+            for i = find(ss.inv_set)
                 if(~isSafe(i))
                     forall = 0;
                     break;

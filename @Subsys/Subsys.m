@@ -233,8 +233,12 @@ classdef Subsys < handle
             x_scaled = x./ss.xpart_res;
             % to ensure that we round DOWN from half-coordinates
             % (according to Sam's transition properties)
-            x_scaled(mod(x_scaled, 1) == 0.5) = ...
-                x_scaled(mod(x_scaled, 1) == 0.5) - 0.5;
+            
+            % for floating point errors
+            threshold = ss.xpart_res*1e-4;
+            
+            x_scaled(abs(mod(x_scaled, 1) - 0.5) < threshold) = ...
+                x_scaled(abs(mod(x_scaled, 1) - 0.5) < threshold) - 0.5;
             pcrd = round(x_scaled);
         end
         

@@ -315,10 +315,10 @@ classdef Subsys < handle
         end
         
         function in = inside(ss, xidx)
-           in = 1;
+           in = 0;
            for i = 1:ss.num_generators
-               if(sum(ss.xpart{xidx} <= ss.vertices(i,:)) ~= ss.sub_n)
-                   in = 0;
+               if(sum(ss.xpart{xidx} <= ss.vertices(i,:)) == ss.sub_n)
+                   in = 1;
                    break;
                end
            end
@@ -330,7 +330,7 @@ classdef Subsys < handle
             end
         end
         
-        function forall = isSafe(x)
+        function forall = isSafe(ss, x)
             % x, u, and d are all indices
             % ss.inside(ss.tmap{x, u}{d})
             % \forall d, \exists u s.t. above holds
@@ -338,8 +338,10 @@ classdef Subsys < handle
             for d = 1:size(ss.d_set, 1)
                 exists = 0;
                 for u = 1:length(ss.upart)
-                    if(ss.inv_set(ss.tmap{x, u}{d}))
+                    if(ss.tmap{x, u}{d} ~= -1 && ss.inv_set(ss.tmap{x, u}{d}))
                         exists = 1;
+                        % disp(['Transition from ', num2str(x), ' to ', ...
+                            % num2str(ss.tmap{x, u}{d}), ' via ', num2str(u)]);
                         break;
                     end
                 end
@@ -354,7 +356,7 @@ classdef Subsys < handle
             % check every state in the invariant set
             forall = 1;
             for i = find(ss.inv_set)
-                if(~isSafe(i))
+                if(~ss.isSafe(i))
                     forall = 0;
                     break;
                 end

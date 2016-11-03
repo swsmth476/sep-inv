@@ -70,7 +70,8 @@ classdef Subsys < handle
         
         % invariant set
         num_generators;
-        vertices;
+        lower;
+        upper;
         inv_set;
         
     end
@@ -139,7 +140,6 @@ classdef Subsys < handle
         function xplus = incrX(ss, part_in)
             part = part_in;
             part_dim = ss.xpart_dim;
-            part_offset = ss.xpart_offset;
             n = length(ss.xpart_dim);
             to_increment = n;
             while(part(to_increment) == part_dim(to_increment) - 1)
@@ -153,7 +153,6 @@ classdef Subsys < handle
         function uplus = incrU(ss, part_in)
             part = part_in;
             part_dim = ss.upart_dim;
-            part_offset = ss.upart_offset;
             n = length(ss.upart_dim);
             to_increment = n;
             while(part(to_increment) == part_dim(to_increment) - 1)
@@ -167,10 +166,8 @@ classdef Subsys < handle
         function ovf = overflow(ss, pcrd, mode)
         	if(strcmp(mode, 'state')) %#ok<ALIGN>
                 part_dim = ss.xpart_dim;
-                part_offset = ss.xpart_offset;
             elseif(strcmp(mode, 'input'))
                 part_dim = ss.upart_dim;
-                part_offset = ss.upart_offset;
             else
                 error('Error: mode specified should either be "state" or "input".');
             end
@@ -232,7 +229,7 @@ classdef Subsys < handle
         function pcrd = xtop(ss, x)
             x_scaled = x./ss.xpart_res;
             % to ensure that we round DOWN from half-coordinates
-            % (according to Sam's transition properties)
+            % (according to Sam's sparse transitions)
             
             % for floating point errors
             threshold = ss.xpart_res*1e-4;
@@ -299,25 +296,35 @@ classdef Subsys < handle
         end
         
         function setGen(ss, gen)
-            % maybe check to make sure gen makes geometric sense?
+            % maybe check to make sure num gen makes geometric sense?
             ss.num_generators = gen;
         end
         
-        function setInv(ss, vert_in)
+        function setInv(ss, upper, lower)
             if(isempty(ss.num_generators))
                 error('Error: number of invariant set generators unset.');
             end
-            if(sum(size(vert_in) == [ss.num_generators ss.sub_n]) ~= 2)
-                error(['wrong dimensions of input, found ', num2str(size(vert_in)), ' expected ', num2str([ss.num_generators ss.sub_n])]);
+            
+            if(sum(size(upper) == [ss.num_generators ss.sub_n]) ~= 2)
+                error(['wrong dimensions of 1st input, found ', num2str(size(vert_in)), ' expected ', num2str([ss.num_generators ss.sub_n])]);
             end
-            ss.vertices = vert_in;
-            ss.updateInv();
+            
+            if(nargin == 2)
+                ss.upper = upper;
+                ss.lower = zeros(size(upper));
+                ss.updateInv();
+            else
+                ss.upper = upper;
+                ss.lower = lower;
+                ss.updateInv();
+            end
         end
         
         function in = inside(ss, xidx)
            in = 0;
            for i = 1:ss.num_generators
-               if(sum(ss.xpart{xidx} <= ss.vertices(i,:)) == ss.sub_n)
+               if(sum(ss.lower(i,:) <= ss.xpart{xidx}) == ss.sub_n ...
+                  && sum(ss.xpart{xidx} <= ss.upper(i,:)) == ss.sub_n)
                    in = 1;
                    break;
                end
@@ -340,12 +347,14 @@ classdef Subsys < handle
                 for u = 1:length(ss.upart)
                     if(ss.tmap{x, u}{d} ~= -1 && ss.inv_set(ss.tmap{x, u}{d}))
                         exists = 1;
+                        disp(['Succeeded at: ', num2str(x)]);
                         % disp(['Transition from ', num2str(x), ' to ', ...
                             % num2str(ss.tmap{x, u}{d}), ' via ', num2str(u)]);
                         break;
                     end
                 end
                 if(~exists)
+                   disp(['Failed at: ', num2str(x)]);
                    forall = 0;
                    break;
                 end
@@ -361,6 +370,10 @@ classdef Subsys < handle
                     break;
                 end
             end
+        end
+        
+        function v = volume(ss)
+            v = sum(ss.inv_set);
         end
     end
 end

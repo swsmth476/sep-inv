@@ -295,40 +295,50 @@ classdef Subsys < handle
             end
         end
         
-        function setGen(ss, gen)
-            % maybe check to make sure num gen makes geometric sense?
-            ss.num_generators = gen;
+%         function setGen(ss, gen)
+%             % maybe check to make sure num gen makes geometric sense?
+%             ss.num_generators = gen;
+%         end
+
+        function setSafe(ss, Hx, hx)
+              ss.Hx = Hx;
+              ss.hx = hx;
         end
         
-        function setInv(ss, upper, lower)
-            if(isempty(ss.num_generators))
-                error('Error: number of invariant set generators unset.');
-            end
-            
-            if(sum(size(upper) == [ss.num_generators ss.sub_n]) ~= 2)
-                error(['wrong dimensions of 1st input, found ', num2str(size(vert_in)), ' expected ', num2str([ss.num_generators ss.sub_n])]);
-            end
-            
-            if(nargin == 2)
-                ss.upper = upper;
-                ss.lower = zeros(size(upper));
-                ss.updateInv();
-            else
-                ss.upper = upper;
-                ss.lower = lower;
-                ss.updateInv();
-            end
-        end
+%         function setInv(ss, upper, lower)
+%             if(isempty(ss.num_generators))
+%                 error('Error: number of invariant set generators unset.');
+%             end
+%             
+%             if(sum(size(upper) == [ss.num_generators ss.sub_n]) ~= 2)
+%                 error(['wrong dimensions of 1st input, found ', num2str(size(vert_in)), ' expected ', num2str([ss.num_generators ss.sub_n])]);
+%             end
+%             
+%             if(nargin == 2)
+%                 ss.upper = upper;
+%                 ss.lower = zeros(size(upper));
+%                 ss.updateInv();
+%             else
+%                 ss.upper = upper;
+%                 ss.lower = lower;
+%                 ss.updateInv();
+%             end
+%         end
         
+%         function in = inside(ss, xidx)
+%            in = 0;
+%            for i = 1:ss.num_generators
+%                if(sum(ss.lower(i,:) <= ss.xpart{xidx}) == ss.sub_n ...
+%                   && sum(ss.xpart{xidx} <= ss.upper(i,:)) == ss.sub_n)
+%                    in = 1;
+%                    break;
+%                end
+%            end
+%         end
+
         function in = inside(ss, xidx)
-           in = 0;
-           for i = 1:ss.num_generators
-               if(sum(ss.lower(i,:) <= ss.xpart{xidx}) == ss.sub_n ...
-                  && sum(ss.xpart{xidx} <= ss.upper(i,:)) == ss.sub_n)
-                   in = 1;
-                   break;
-               end
-           end
+            x_check = ptox(ss.xpart{xidx}, 'upper'); % get state
+            in = (x_check*Hx <= hx); % check that bound is respected
         end
         
         function updateInv(ss)
@@ -337,28 +347,32 @@ classdef Subsys < handle
             end
         end
         
-        function forall = isSafe(ss, x)
-            % x, u, and d are all indices
-            % ss.inside(ss.tmap{x, u}{d})
-            % \forall d, \exists u s.t. above holds
-            forall = 1;
-            for d = 1:size(ss.d_set, 1)
-                exists = 0;
-                for u = 1:length(ss.upart)
-                    if(ss.tmap{x, u}{d} ~= -1 && ss.inv_set(ss.tmap{x, u}{d}))
-                        exists = 1;
-                        disp(['Succeeded at: ', num2str(x)]);
-                        % disp(['Transition from ', num2str(x), ' to ', ...
-                            % num2str(ss.tmap{x, u}{d}), ' via ', num2str(u)]);
-                        break;
-                    end
-                end
-                if(~exists)
-                   disp(['Failed at: ', num2str(x)]);
-                   forall = 0;
-                   break;
-                end
-            end
+%         function forall = isSafe(ss, x)
+%             % x, u, and d are all indices
+%             % ss.inside(ss.tmap{x, u}{d})
+%             % \forall d, \exists u s.t. above holds
+%             forall = 1;
+%             for d = 1:size(ss.d_set, 1)
+%                 exists = 0;
+%                 for u = 1:length(ss.upart)
+%                     if(ss.tmap{x, u}{d} ~= -1 && ss.inv_set(ss.tmap{x, u}{d}))
+%                         exists = 1;
+%                         disp(['Succeeded at: ', num2str(x)]);
+%                         % disp(['Transition from ', num2str(x), ' to ', ...
+%                             % num2str(ss.tmap{x, u}{d}), ' via ', num2str(u)]);
+%                         break;
+%                     end
+%                 end
+%                 if(~exists)
+%                    disp(['Failed at: ', num2str(x)]);
+%                    forall = 0;
+%                    break;
+%                 end
+%             end
+%         end
+
+        function
+            % use recursion to verify if a state is safe
         end
         
         function forall = verifyInv(ss)
@@ -372,8 +386,5 @@ classdef Subsys < handle
             end
         end
         
-        function v = volume(ss)
-            v = sum(ss.inv_set);
-        end
     end
 end

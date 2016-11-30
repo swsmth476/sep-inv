@@ -344,10 +344,12 @@ classdef Subsys < handle
         
         function ConInvOI(ss)
             % converge inwards to a controlled invariant set
-            iter = 1;
+            iter = 0;
             while(ss.removeUnsafe())
+                iter = iter + 1;
                 disp(['Shrinking safe set, iteration: ' num2str(iter)]);
             end
+            
             volume = sum(ss.inv_set);
             if(volume)
                 disp(['Success! ' num2str(volume) ' safe states found.']);

@@ -37,7 +37,7 @@ classdef Search_Helper < handle
        
         function sh = Search_Helper(dpart_res, dpart_dim, dpart_offset)
             
-            if(sum(size(dpart_dim, 1) == [1 2]) ~= 2)
+            if(sum(size(dpart_dim) == [1 2]) ~= 2)
                 error('Error: partition dimensions should be 1x2 row vector.');
             end
             
@@ -50,28 +50,15 @@ classdef Search_Helper < handle
             sh.dpart_dim = dpart_dim;
             sh.dpart_offset = dpart_offset;
             
-            createPart();
-            sh.dsearch = -ones(size(dpart));
+            sh.createPart();
+            sh.dsearch = -ones(size(sh.dpart));
             
         end
         
-        function set_If(sh, C1, C2, E1, E2)
-            % maybe add more dimensions of disturbance through C matrix
-            % later?
-            if(size(C1,1) ~= 1 || size(C2,1) ~= 1)
-                error('Only 1-dimensional disturbances supported.');
-            end
-            
-            if(size(E1,1) ~= size(C2,2) || size(E2,1) ~= size(C1,2))
-                error('Dimension mismatch between output and disturbance input.');
-            end
-            
-            % set interconnection
-            sh.C1 = C1;
-            sh.C2 = C2;
+        function set_If(sh, E1, E2)
+            % set interconnection function
             sh.E1 = E1;
             sh.E2 = E2;
-            
         end
         
         function createPart(sh)
@@ -85,7 +72,7 @@ classdef Search_Helper < handle
             end
         end
         
-        function dplus = incrX(sh, part_in)
+        function dplus = incrD(sh, part_in)
             part = part_in;
             part_dim = sh.dpart_dim;
             n = length(sh.dpart_dim);
@@ -98,12 +85,22 @@ classdef Search_Helper < handle
             dplus = part;
         end
         
+        function [bound1, bound2] = get_assumptions(sh, dcrd)
+            sample = dcrd.*sh.dpart_res + sh.dpart_offset;
+            bound1 = sample(1).*sh.E1';
+            bound2 = sample(2).*sh.E2';
+        end
+        
         function dcrd = find_sample(sh)
             % randomly select disturbance partition to sample
             opt = find(sh.dsearch == -1);
-            numopt = length(opt);
-            idx = randsample(numopt, 1);
-            dcrd = sh.dpart{idx};
+            if(isempty(opt))
+                dcrd = -1;
+            else
+                numopt = length(opt);
+                idx = randsample(numopt, 1);
+                dcrd = sh.dpart{idx};
+            end
         end
         
         function update_search(sh, dcrd, result)

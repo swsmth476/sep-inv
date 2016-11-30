@@ -69,10 +69,14 @@ classdef Subsys < handle
         tmap;
         
         % invariant set
-        num_generators;
-        lower;
-        upper;
+        Hx;
+        hx;
         inv_set;
+        
+%         num_generators;
+%         lower;
+%         upper;
+%         inv_set;
         
     end
     
@@ -301,8 +305,8 @@ classdef Subsys < handle
         end
         
         function in = inside(ss, xidx)
-            x_check = ptox(ss.xpart{xidx}, 'upper'); % get state
-            in = (x_check*Hx <= hx); % check that bound is respected
+            x_check = ptox(ss, ss.xpart{xidx}, 'upper')'; % get state
+            in = (sum(ss.Hx*x_check <= ss.hx) == ss.sub_n); % check that bound is respected
         end
         
         function updateInv(ss)
@@ -342,7 +346,7 @@ classdef Subsys < handle
             end
         end
         
-        function ConInvOI(ss)
+        function volume = ConInvOI(ss)
             % converge inwards to a controlled invariant set
             iter = 0;
             while(ss.removeUnsafe())

@@ -85,10 +85,12 @@ classdef Search_Helper < handle
             dplus = part;
         end
         
-        function [bound1, bound2] = get_assumptions(sh, dcrd)
-            sample = dcrd.*sh.dpart_res + sh.dpart_offset;
-            bound1 = sample(1).*sh.E1';
-            bound2 = sample(2).*sh.E2';
+        function [d1, d2, bound1, bound2] = get_assumptions(sh, index)
+            sample = sh.dpart{index}.*sh.dpart_res + sh.dpart_offset;
+            bound1 = sample(1);
+            bound2 = sample(2);
+            d1 = bound1.*sh.E1';
+            d2 = bound2.*sh.E2';
         end
         
         function dcrd = find_sample(sh)
@@ -105,18 +107,26 @@ classdef Search_Helper < handle
         
         function update_search(sh, dcrd, result)
             % update search grid using directed specification ideas
+%             if(strcmp(result, 'success'))
+%                 for i = 1:length(sh.dsearch)
+%                     if(sum(sh.dpart{i} <= dcrd) == 2)
+%                         sh.dsearch(i) = 1;
+%                     end
+%                 end
+%             elseif(strcmp(result, 'fail'))
+%                 for i = 1:length(sh.dsearch)
+%                     if(sum(sh.dpart{i} >= dcrd) == 2)
+%                         sh.dsearch(i) = 0;
+%                     end
+%                 end
+%             else
+%                 error('Invalid result. Expected "success" or "fail".');
+%             end
+
             if(strcmp(result, 'success'))
-                for i = 1:length(sh.dsearch)
-                    if(sum(sh.dpart{i} <= dcrd) == 2)
-                        sh.dsearch(i) = 1;
-                    end
-                end
+                sh.dsearch(dcrd) = 1;
             elseif(strcmp(result, 'fail'))
-                for i = 1:length(sh.dsearch)
-                    if(sum(sh.dpart{i} >= dcrd) == 2)
-                        sh.dsearch(i) = 0;
-                    end
-                end
+                sh.dsearch(dcrd) = 0;
             else
                 error('Invalid result. Expected "success" or "fail".');
             end

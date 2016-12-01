@@ -210,7 +210,7 @@ classdef Subsys < handle
         end
         
         function x = ptox(ss, pidx, mode)
-            if(ss.overflow(pidx, 'state'))
+            if(overflow(ss, pidx, 'state'))
                 error('Error: coordinate is out of state partition.');
             end
             
@@ -306,7 +306,7 @@ classdef Subsys < handle
         
         function in = inside(ss, xidx)
             x_check = ptox(ss, ss.xpart{xidx}, 'upper')'; % get state
-            in = (sum(ss.Hx*x_check <= ss.hx) == ss.sub_n); % check that bound is respected
+            in = (sum(ss.Hx*x_check <= ss.hx) == length(ss.hx)); % check that bound is respected
         end
         
         function updateInv(ss)

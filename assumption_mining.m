@@ -18,7 +18,7 @@ ss2.setAB(A_ii, B_i);
 sh = Search_Helper(.1, [41 41], [0 0]);
 sh.set_If(E_i, E_i);
 
-for i = 804:length(sh.dpart)
+for i = 1:length(sh.dpart)
     
     sample = i;
 

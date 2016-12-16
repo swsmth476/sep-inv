@@ -18,6 +18,10 @@ ss2.setAB(A_ii, B_i);
 sh = Search_Helper(.1, [41 41], [0 0]);
 sh.set_If(E_i, E_i);
 
+% to track results
+volume_array1 = zeros(1, length(sh.dpart));
+volume_array2 = zeros(1, length(sh.dpart));
+
 for i = 1:length(sh.dpart)
     
     sample = i;
@@ -39,9 +43,7 @@ for i = 1:length(sh.dpart)
     
     % shrink down to invariant sets
     volume1 = ss1.ConInvOI();
-    if(volume1 ~= 0)
-        volume2 = ss2.ConInvOI();
-    end
+    volume2 = ss2.ConInvOI();
     
     % result
     if(volume1 ~= 0 && volume2 ~= 0)
@@ -50,7 +52,11 @@ for i = 1:length(sh.dpart)
         result = 'fail';
     end
     
-    % use monotone specification ideas to update search
+    % store results
+    volume_array1(i) = volume1;
+    volume_array2(i) = volume2;
+    
+    % update search
     sh.update_search(sample, result);
     
 end

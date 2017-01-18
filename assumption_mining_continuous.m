@@ -6,9 +6,18 @@ B_i = [0; 1];
 C_i = [1 1];
 E_i = [.45; .3];
 
+% rotation example
+% angle = 20;
+% theta = 2*pi*angle/360;
+% decay = 0.65;
+% A_ii = decay.*[cos(theta) -sin(theta); sin(theta) cos(theta)];
+% B_i = [1; 0];
+% C_i = [1 1];
+% E_i = [.3; .15];
+
 % input polyhedron
 Hu = [1; -1];
-hu = [.55; .65];
+hu = [1; 0];
 
 % subsystem 1
 ls1 = LinSys(Hu, hu, A_ii, B_i, E_i, [0; 0]);
@@ -31,6 +40,10 @@ for i = 1:length(sh.dpart)
     % get assumptions
     [d1, d2, bound1, bound2] = sh.get_assumptions(sample);
     
+    if(abs(bound1 - 2.8) < .01 && abs(bound2 - 2.4) < .01)
+        6
+    end
+    
     % set assumptions for each system
     ls1.setd([1; -1], [bound2; 0]);
     ls2.setd([1; -1], [bound1; 0]);
@@ -40,8 +53,15 @@ for i = 1:length(sh.dpart)
     X2 = Polyhedron([-eye(2); C_i], [0; 0; bound2]);
     
     % shrink down to invariant sets
-    volume1 = volume(ls1.ConInvOI(X1));
-    volume2 = volume(ls2.ConInvOI(X2));
+    [C1, iter1] = ls1.ConInvOI(X1);
+    [C2, iter2] = ls2.ConInvOI(X2);
+    
+    volume1 = volume(C1);
+    volume2 = volume(C2);
+    
+    if(volume1 ~= 0 && volume2 ~= 0 && (iter1 > 1 || iter2 > 1))
+        6
+    end
     
     % result
     if(volume1 ~= 0 && volume2 ~= 0)

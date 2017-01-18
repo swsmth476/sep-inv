@@ -6,6 +6,15 @@ B_i = [0; 1];
 C_i = [1 1];
 E_i = [.45; .3];
 
+% rotation example
+% angle = 20;
+% theta = 2*pi*angle/360;
+% decay = 0.95;
+% A_ii = decay.*[cos(theta) -sin(theta); sin(theta) cos(theta)];
+% B_i = [1; 0];
+% C_i = [1 1];
+% E_i = [.3; .15];
+
 % subsystem 1
 ss1 = Subsys(2, .1, [21 21], [0 0], .1, 13, -.65);
 ss1.setAB(A_ii, B_i);

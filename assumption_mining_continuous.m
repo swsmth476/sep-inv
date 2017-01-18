@@ -51,8 +51,15 @@ for i = 1:length(sh.dpart)
     end
     
     % store results
-    volume_array1(i) = volume1;
-    volume_array2(i) = volume2;
+    if(volume1 == 0 || volume2 == 0)
+        volume1 = 0;
+        volume2 = 0;
+    end
+    
+    % volume_array1(i) = volume1;
+    % volume_array2(i) = volume2;
+    volume_array(i) = volume1 + volume2;
+    
     
     % update search
     sh.update_search(sample, result);

@@ -6,13 +6,15 @@ B_i = [0; 1];
 C_i = [1 1];
 E_i = [.45; .3];
 
+% input polyhedron
+Hu = [1; -1];
+hu = [.55; .65];
+
 % subsystem 1
-ss1 = Subsys(2, .1, [21 21], [0 0], .1, 13, -.65);
-ss1.setAB(A_ii, B_i);
+ls1 = LinSys(Hu, hu, A_ii, B_i, E_i, [0; 0]);
 
 % subsystem 2
-ss2 = Subsys(2, .1, [21 21], [0 0], .1, 13, -.65);
-ss2.setAB(A_ii, B_i);
+ls2 = LinSys(Hu, hu, A_ii, B_i, E_i, [0; 0]);
 
 % search helper
 sh = Search_Helper(.1, [41 41], [0 0]);
@@ -30,20 +32,16 @@ for i = 1:length(sh.dpart)
     [d1, d2, bound1, bound2] = sh.get_assumptions(sample);
     
     % set assumptions for each system
-    ss1.setd(d2);
-    ss2.setd(d1);
-    ss1.getTrans();
-    ss2.getTrans();
+    ls1.setd([1; -1], [bound2; 0]);
+    ls2.setd([1; -1], [bound1; 0]);
     
     % require that each system meets assumptions
-    ss1.setSafe(C_i, bound1);
-    ss2.setSafe(C_i, bound2);
-    ss1.updateInv();
-    ss2.updateInv();
+    X1 = Polyhedron([-eye(2); 1 1], [0; 0; bound1]);
+    X2 = Polyhedron([-eye(2); 1 1], [0; 0; bound2]);
     
     % shrink down to invariant sets
-    volume1 = ss1.ConInvOI();
-    volume2 = ss2.ConInvOI();
+    volume1 = volume(ss1.ConInvOI());
+    volume2 = volume(ss2.ConInvOI());
     
     % result
     if(volume1 ~= 0 && volume2 ~= 0)

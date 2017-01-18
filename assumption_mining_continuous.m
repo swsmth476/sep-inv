@@ -36,12 +36,12 @@ for i = 1:length(sh.dpart)
     ls2.setd([1; -1], [bound1; 0]);
     
     % require that each system meets assumptions
-    X1 = Polyhedron([-eye(2); 1 1], [0; 0; bound1]);
-    X2 = Polyhedron([-eye(2); 1 1], [0; 0; bound2]);
+    X1 = Polyhedron([-eye(2); C_i], [0; 0; bound1]);
+    X2 = Polyhedron([-eye(2); C_i], [0; 0; bound2]);
     
     % shrink down to invariant sets
-    volume1 = volume(ss1.ConInvOI());
-    volume2 = volume(ss2.ConInvOI());
+    volume1 = volume(ls1.ConInvOI(X1));
+    volume2 = volume(ls2.ConInvOI(X2));
     
     % result
     if(volume1 ~= 0 && volume2 ~= 0)

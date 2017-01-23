@@ -77,6 +77,9 @@ classdef Subsys < handle
 %         lower;
 %         upper;
 %         inv_set;
+
+        % for floating point errors
+        threshold;
         
     end
     
@@ -100,6 +103,8 @@ classdef Subsys < handle
             ss.xpart_res = xpart_res;
             ss.xpart_dim = xpart_dim;
             ss.xpart_offset = xpart_offset;
+            
+            ss.threshold = ss.xpart_res*1e-4;
             
             ss.upart_res = upart_res;
             ss.upart_dim = upart_dim;
@@ -183,7 +188,9 @@ classdef Subsys < handle
             end
             
             n = length(part_dim);
-            ovf = (sum(zeros(size(part_dim)) <= pcrd) ~= n) ...
+            % ovf = (sum(zeros(size(part_dim)) <= pcrd) ~= n) ...
+            % changed to below to handle floating point errors
+            ovf = (sum(zeros(size(part_dim)) < pcrd || abs(pcrd) < ss.threshold) ~= n) ...
                             || (sum(pcrd < part_dim) ~= n);
         end
         
@@ -235,11 +242,8 @@ classdef Subsys < handle
             % to ensure that we round DOWN from half-coordinates
             % (according to Sam's sparse transitions)
             
-            % for floating point errors
-            threshold = ss.xpart_res*1e-4;
-            
-            x_scaled(abs(mod(x_scaled, 1) - 0.5) < threshold) = ...
-                x_scaled(abs(mod(x_scaled, 1) - 0.5) < threshold) - 0.5;
+            x_scaled(abs(mod(x_scaled, 1) - 0.5) < ss.threshold) = ...
+                x_scaled(abs(mod(x_scaled, 1) - 0.5) < ss.threshold) - 0.5;
             pcrd = round(x_scaled);
         end
         
@@ -306,7 +310,7 @@ classdef Subsys < handle
         
         function in = inside(ss, xidx)
             x_check = ptox(ss, ss.xpart{xidx}, 'upper')'; % get state
-            in = (sum(ss.Hx*x_check <= ss.hx) == length(ss.hx)); % check that bound is respected
+            in = (sum(ss.Hx*x_check < ss.hx || abs(ss.Hx*x_check - ss.hx < ss.threshold)) == length(ss.hx)); % check that bound is respected
         end
         
         function updateInv(ss)
@@ -358,9 +362,9 @@ classdef Subsys < handle
             
             volume = sum(ss.inv_set);
             if(volume)
-                disp(['Success! ' num2str(volume) ' safe states found.']);
+                % disp(['Success! ' num2str(volume) ' safe states found.']);
             else
-                disp('No safe states found.');
+                % disp('No safe states found.');
             end
         end
     end

@@ -36,7 +36,7 @@ continuous_array2 = zeros(1, length(sh.dpart));
 cWin = zeros(1, length(sh.dpart));
 dWin = zeros(1, length(sh.dpart));
 
-for i = cIndices % 1:length(sh.dpart)
+for i = 1:length(sh.dpart)
     
     sample = i
 

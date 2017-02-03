@@ -31,10 +31,13 @@ ls2 = LinSys(Hu, hu, A_ii, B_i, E_i, [0; 0]);
 % to track results
 discrete_array1 = zeros(1, length(sh.dpart));
 discrete_array2 = zeros(1, length(sh.dpart));
+discrete_array3 = zeros(1, length(sh.dpart));
 continuous_array1 = zeros(1, length(sh.dpart));
 continuous_array2 = zeros(1, length(sh.dpart));
+continuous_array3 = zeros(1, length(sh.dpart));
 cWin = zeros(1, length(sh.dpart));
 dWin = zeros(1, length(sh.dpart));
+tie = zeros(1, length(sh.dpart));
 
 for i = 1:length(sh.dpart)
     
@@ -63,6 +66,12 @@ for i = 1:length(sh.dpart)
     discrete_array1(i) = volume1;
     discrete_array2(i) = volume2;
     
+    if(volume1 == 0 || volume2 == 0)
+        discrete_array3(i) = 0;
+    else
+        discrete_array3(i) = volume1 + volume2;
+    end
+    
     if(volume1 ~= 0 && volume2 ~= 0)
         discrete_result = 1;
     else
@@ -87,6 +96,12 @@ for i = 1:length(sh.dpart)
     continuous_array1(i) = volume1;
     continuous_array2(i) = volume2;
     
+    if(volume1 == 0 || volume2 == 0)
+        continuous_array3(i) = 0;
+    else
+        continuous_array3(i) = volume1 + volume2;
+    end
+    
     if(volume1 ~= 0 && volume2 ~= 0)
         continuous_result = 1;
     else
@@ -97,6 +112,8 @@ for i = 1:length(sh.dpart)
         dWin(i) = 1;
     elseif(discrete_result == 0 && continuous_result == 1)
         cWin(i) = 1;
+    elseif(discrete_result == 1 && discrete_result == 1)
+        tie(i) = 1;
     end
     
 end

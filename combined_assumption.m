@@ -41,7 +41,7 @@ tie = zeros(1, length(sh.dpart));
 
 for i = 1:length(sh.dpart)
     
-    sample = cIndex(i)
+    sample = i
 
     % get assumptions
     [d1, d2, bound1, bound2] = sh.get_assumptions(sample);

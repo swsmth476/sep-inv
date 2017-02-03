@@ -7,11 +7,11 @@ C_i = [1 1];
 E_i = [.45; .3];
 
 % subsystem 1
-ss1 = Subsys(2, .1, [21 21], [0 0], .1, 13, -.65);
+ss1 = Subsys(2, .1, [41 41], [0 0], .1, 13, -.65);
 ss1.setAB(A_ii, B_i);
 
 % subsystem 2
-ss2 = Subsys(2, .1, [21 21], [0 0], .1, 13, -.65);
+ss2 = Subsys(2, .1, [41 41], [0 0], .1, 13, -.65);
 ss2.setAB(A_ii, B_i);
 
 % search helper
@@ -41,7 +41,7 @@ tie = zeros(1, length(sh.dpart));
 
 for i = 1:length(sh.dpart)
     
-    sample = i
+    sample = cIndex(i)
 
     % get assumptions
     [d1, d2, bound1, bound2] = sh.get_assumptions(sample);

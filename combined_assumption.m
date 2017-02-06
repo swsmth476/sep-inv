@@ -7,11 +7,11 @@ C_i = [1 1];
 E_i = [.45; .3];
 
 % subsystem 1
-ss1 = Subsys(2, .1, [41 41], [0 0], .1, 13, -.65);
+ss1 = Subsys(2, .1, [41 41], [.05 .05], .1, 13, -.65);
 ss1.setAB(A_ii, B_i);
 
 % subsystem 2
-ss2 = Subsys(2, .1, [41 41], [0 0], .1, 13, -.65);
+ss2 = Subsys(2, .1, [41 41], [.05 .05], .1, 13, -.65);
 ss2.setAB(A_ii, B_i);
 
 % search helper

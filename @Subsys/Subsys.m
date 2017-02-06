@@ -238,6 +238,7 @@ classdef Subsys < handle
         end
             
         function pcrd = xtop(ss, x)
+            x = x - ss.xpart_offset;
             x_scaled = x./ss.xpart_res;
             % to ensure that we round DOWN from half-coordinates
             % (according to Sam's sparse transitions)
@@ -310,7 +311,7 @@ classdef Subsys < handle
         
         function in = inside(ss, xidx)
             x_check = ptox(ss, ss.xpart{xidx}, 'upper')'; % get state
-            in = (sum(ss.Hx*x_check < ss.hx || abs(ss.Hx*x_check - ss.hx < ss.threshold)) == length(ss.hx)); % check that bound is respected
+            in = (sum((ss.Hx*x_check < ss.hx) || (abs(ss.Hx*x_check - ss.hx) < ss.threshold)) == length(ss.hx)); % check that bound is respected
         end
         
         function updateInv(ss)
